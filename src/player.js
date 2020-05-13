@@ -1,0 +1,198 @@
+import { RadioParser } from './icecast-parser'
+
+(() => {
+  /// Config
+  const mixesDirectory = 'https://media.infinitenew.world/mixes/'
+  const radioArchiveDirectory = 'https://media.infinitenew.world/radio/'
+  // const radioStreamUrl = 'https://radio.infinitenew.world/stream'
+  const radioStreamUrl = 'https://live.hunter.fm/80s'
+
+  // const radioStation = new RadioParser({
+  //   url: radioStreamUrl,
+  //   userAgent: 'Parse-Icy'
+  // })
+  // radioStation.on('metadata', function(metadata) {
+  //     console.log([metadata.StreamTitle, 'is playing on', this.getConfig('url')].join(' '))
+  // })
+
+  /// Setup HTML Structure
+  const containerHtml = `
+    <div class="inw-loading"></div>
+
+    <button class="inw-player-play-btn"></button>
+
+    <div class="inw-player-current-item-container">
+      <div class="inw-player-current-item-type"></div>
+      <div class="inw-player-current-item-title"></div>
+    </div>
+
+    <audio id="inw-player-audio"></audio>
+  `
+
+  const container = document.createElement('div')
+  container.className = 'inw-player-container'
+  container.innerHTML = containerHtml
+  document.body.appendChild(container)
+
+  const loadingIndicator = container.querySelector('.inw-loading')
+  const playButton = container.querySelector('.inw-player-play-btn')
+  const currentItemTypeEl = container.querySelector('.inw-player-current-item-type')
+  const currentItemTitleEl = container.querySelector('.inw-player-current-item-title')
+
+  const audioEl = container.querySelector('audio')
+
+  // TODO: clean elements for title, type, duration, current time
+
+  /// Data
+  const data = {
+    mixItems: [],
+    radioArchiveItems: [],
+    homePageMixes: scrapeHomepageMixList() // Get list of all mixes shown on the home page
+  }
+
+  /// State
+  const state = {
+    loading: true,
+    currentAudioItem: null, // null or { type, name, url } item
+    playing: false
+  }
+
+  const renderFromState = () => {
+    loadingIndicator.style.display = state.loading ? 'block' : 'none'
+    loadingIndicator.innerHTML = state.loading ? 'Loading...' : ''
+
+    playButton.innerHTML = state.playing ? 'Pause' : 'Play'
+
+    currentItemTypeEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.type : ''
+    currentItemTitleEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.name : ''
+  }
+
+  const updateAudioSrc = () => {
+    if (state.currentAudioItem) {
+      audioEl.src = state.currentAudioItem.url
+    } else {
+      audioEl.src = null
+      audioEl.currentTime = 0
+      state.playing = false
+    }
+  }
+
+  const chooseInitialSrc = () => {
+    // TODO: if radio is live, choose that :)
+
+    // choose randomly from available media
+    const possibleItems = [
+      ...data.mixItems,
+      ...data.radioArchiveItems
+    ]
+
+    if (possibleItems.length === 0) {
+      return
+    }
+
+    const item = possibleItems[Math.floor(Math.random() * possibleItems.length)]
+    state.currentAudioItem = item
+    updateAudioSrc()
+  }
+
+  /// Setup interaction logic
+
+  // main play button logic
+  playButton.onclick = () => {
+    if (state.loading) {
+      return
+    }
+
+    if (state.playing) {
+      audioEl.pause()
+      state.playing = false
+    } else {
+      if (!state.currentAudioItem) {
+        chooseInitialSrc()
+      }
+
+      if (state.currentAudioItem) {
+        audioEl.play()
+        state.playing = true
+      }
+    }
+
+    renderFromState()
+  }
+
+  // TODO: logic for clicking mixes on the home page
+
+  /// Loading Initial State
+
+  const loadMixArchiveItems = () => scrapeNamecheapHostingDirectoryForLinkNames(mixesDirectory)
+    .then(archiveNames => {
+      return archiveNames.map(name => ({ type: 'mix', name: name, url: `${mixesDirectory}${name}/${name}.mp3` }))
+    })
+
+  const loadRadioArchiveItems = () => scrapeNamecheapHostingDirectoryForLinkNames(radioArchiveDirectory)
+    .then(archiveNames => {
+      return archiveNames.map(name => ({ type: 'radio-archive', name: name, url: `${radioArchiveDirectory}${name}/${name}.mp3` }))
+    })
+
+  function loadExternalData() {
+    return Promise.all([
+      loadMixArchiveItems().then(items => {
+        data.mixItems = items
+      }),
+      loadRadioArchiveItems().then(items => {
+        data.radioArchiveItems = items
+      })
+    ])
+  }
+
+  /// Starting Up
+
+  renderFromState()
+  loadExternalData().then(() => {
+    state.loading = false
+    console.log(data)
+    renderFromState()
+  })
+
+  /// Helper functions
+
+  function scrapeHomepageMixList() {
+    // kind of a horrible function that is dependent on the markup of the cargo site
+    // ... uses it to grab a list of all visible mix titles and their corresponding images
+    const homePageMixes = []
+    const bodyCopy = document.getElementsByClassName('bodycopy')[2]
+    if (bodyCopy) {
+      const boldTitleEls = bodyCopy.querySelectorAll('h1 > b')
+      const imageEls = bodyCopy.querySelectorAll('div > img')
+      boldTitleEls.forEach((el, idx) => {
+        const title = el.innerHTML
+        const imgEl = imageEls[idx]
+        if (title && imgEl) {
+          homePageMixes.push({ title: title, titleEl: el, imgEl: imgEl })
+        }
+      })
+    }
+
+    return homePageMixes
+  }
+
+  function scrapeNamecheapHostingDirectoryForLinkNames(namecheapUrl) {
+    return fetch(namecheapUrl)
+      .then(response => response.text())
+      .then(text => {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(text, 'text/html')
+        const tableLinks = doc.querySelectorAll('tbody > tr > td > a')
+        const fileNames = Array.from(tableLinks)
+          .slice(1) // first link is to parent directory
+          .map(item => item.innerHTML.slice(0, -1)) // title of link is name of file, remove trailing slash
+
+        return fileNames
+      })
+      .catch(err => {
+        console.log('err scraping namecheap hosting', namecheapUrl, err)
+        return []
+      })
+  }
+
+})()

@@ -1,0 +1,20 @@
+{
+  "name": "infinite-new-world-radio-player",
+  "version": "0.0.0",
+  "main": "src/player.js",
+  "repository": "https://github.com/kevin-roark/infinite-new-world-radio-player.git",
+  "author": "Kevin Roark <kevin.e.roark@gmail.com>",
+  "private": true,
+  "dependencies": {
+    "icecast-parser": "^3.2.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.9.6",
+    "babel-preset-env": "^1.7.0",
+    "parcel-bundler": "^1.12.4",
+    "prettier": "^2.0.5"
+  },
+  "scripts": {
+    "start": "parcel src/index.html"
+  }
+}
