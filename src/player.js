@@ -4,7 +4,7 @@
   const radioArchiveDirectory = 'https://media.infinitenew.world/radio/'
   const radioHomeUrl = `https://radio.infinitenew.world`
   const radioStreamUrl = 'https://radio.infinitenew.world/stream'
-  const radioMetadataUpdateInterval = 10 * 1000
+  const radioMetadataUpdateInterval = 30 * 1000
 
   /// Setup HTML Structure
   const containerHtml = `
@@ -26,6 +26,11 @@
       </div>
     </div>
 
+    <div class="inw-player-radio-live-container">
+      <div class="inw-player-radio-live-title offline"></div>
+      <div class="inw-player-radio-live-dot offline"></div>
+    </div>
+
     <audio id="inw-player-audio"></audio>
   `
 
@@ -44,6 +49,9 @@
   const durationEl = container.querySelector('.inw-player-duration')
   const progressBarBgEl = container.querySelector('.inw-player-progress-bar-bg')
   const progressBarEl = container.querySelector('.inw-player-progress-bar')
+
+  const radioLiveContainer = container.querySelector('.inw-player-radio-live-container')
+  const radioLiveTitle = container.querySelector('.inw-player-radio-live-title')
 
   const audioEl = container.querySelector('audio')
 
@@ -104,6 +112,12 @@
     currentItemTypeEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.type : ''
     currentItemTitleEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.name : ''
     updateAudioUIElements()
+
+    const md = state.radioMetadata
+    radioLiveContainer.className = `inw-player-radio-live-container ${state.radioAvailable ? 'online' : 'offline'}`
+    radioLiveTitle.innerHTML = state.radioAvailable
+      ? `Radio live${md && md.name ? ` — ${md.name}` : ''}`
+      : 'No Radio'
   }
 
   /// Audio Updates
@@ -135,18 +149,27 @@
     }
   }
 
-  const getRadioName = () => {
+  const setAndPlayAudioItem = item => {
+    if (item) {
+      state.currentAudioItem = item
+      updateAudioSrc()
+      playAudio()
+      renderFromState()
+    }
+  }
+
+  const getRadioAudioItem = () => {
     const md = state.radioMetadata
-    return md ? `${md.name}${md.description ? ` - ${md.description}` : ''}` : ''
+    return {
+      type: 'Radio',
+      name: md ? `${md.name}${md.description ? ` - ${md.description}` : ''}` : '',
+      url: radioStreamUrl
+    }
   }
 
   const chooseInitialSrc = () => {
     if (state.radioAvailable) {
-      state.currentAudioItem = {
-        type: 'Radio',
-        name: getRadioName(),
-        url: radioStreamUrl
-      }
+      state.currentAudioItem = getRadioAudioItem()
       updateAudioSrc()
       return
     }
@@ -194,14 +217,18 @@
       item.imgEl.onclick = (e) => {
         const mixItem = data.mixItems.find(d => d.name == item.title)
         if (mixItem) {
-          state.currentAudioItem = mixItem
-          updateAudioSrc()
-          playAudio()
-          renderFromState()
+          setAndPlayAudioItem(mixItem)
         }
       }
     }
   })
+
+  // radio live container click logic
+  radioLiveContainer.onclick = (e) => {
+    if (state.radioAvailable && (!state.currentAudioItem || state.currentAudioItem.type != 'Radio')) {
+      setAndPlayAudioItem(getRadioAudioItem())
+    }
+  }
 
   // progress bar click logic
   progressBarBgEl.onclick = (e) => {
@@ -228,6 +255,10 @@
 
   const getRadioAvailable = () => fetch(radioStreamUrl)
     .then(res => res.status == 200)
+    .catch(err => {
+      console.log(err)
+      return false
+    })
 
   const updateRadioAvailable = () => getRadioAvailable().then(avail => {
     state.radioAvailable = !!avail
@@ -237,12 +268,11 @@
     state.radioMetadata = metadata
     if (state.currentAudioItem && state.currentAudioItem.type === 'Radio') {
       if (metadata) {
-        state.currentAudioItem.name = getRadioName()
+        state.currentAudioItem.name = getRadioAudioItem().name
       } else {
         state.currentAudioItem = null
         currentAudioItem()
       }
-      renderFromState()
     }
   })
 
@@ -263,6 +293,7 @@
     try {
       updateRadioAvailable()
       updateRadioMetadata()
+      renderFromState()
     } catch (err) {
       console.log(err)
     }

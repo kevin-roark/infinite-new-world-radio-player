@@ -92,3 +92,36 @@
   box-shadow: 0 0px 3px rgba(0,0,0,0.24), 0 0px 2px rgba(0,0,0,0.44);
   border: 1px solid rgba(0, 0, 0, 0.25);
 }
+
+.inw-player-radio-live-container {
+  position: absolute;
+  top: 0; right: 0;
+  background: #aaa;
+  padding: 2px 6px;
+  display: flex; align-items: center;
+}
+
+.inw-player-radio-live-title {
+  color: #444;
+  font-size: 12px;
+}
+
+.inw-player-radio-live-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #888;
+  margin-left: 5px;
+}
+
+.inw-player-radio-live-container.online {
+  cursor: pointer;
+  background: #9bc7e8;
+}
+
+.inw-player-radio-live-container.online .inw-player-radio-live-title {
+  color: #000;
+}
+
+.inw-player-radio-live-container.online .inw-player-radio-live-dot {
+  background: #00f;
+}
