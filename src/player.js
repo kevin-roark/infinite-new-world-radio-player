@@ -1,19 +1,9 @@
-import { RadioParser } from './icecast-parser'
-
 (() => {
   /// Config
   const mixesDirectory = 'https://media.infinitenew.world/mixes/'
   const radioArchiveDirectory = 'https://media.infinitenew.world/radio/'
-  // const radioStreamUrl = 'https://radio.infinitenew.world/stream'
-  const radioStreamUrl = 'https://live.hunter.fm/80s'
-
-  // const radioStation = new RadioParser({
-  //   url: radioStreamUrl,
-  //   userAgent: 'Parse-Icy'
-  // })
-  // radioStation.on('metadata', function(metadata) {
-  //     console.log([metadata.StreamTitle, 'is playing on', this.getConfig('url')].join(' '))
-  // })
+  const radioHomeUrl = `https://radio.infinitenew.world`
+  const radioStreamUrl = 'https://radio.infinitenew.world/stream'
 
   /// Setup HTML Structure
   const containerHtml = `
@@ -66,6 +56,8 @@ import { RadioParser } from './icecast-parser'
   /// State
   const state = {
     loading: true,
+    radioAvailable: false,
+    radioMetadata: null, // null or { name, description }
     currentAudioItem: null, // null or { type, name, url } item
     playing: false
   }
@@ -88,12 +80,14 @@ import { RadioParser } from './icecast-parser'
   }
 
   const updateAudioUIElements = () => {
-    if (state.currentAudioItem && audioEl.duration) {
+    if (state.currentAudioItem) {
+      const radio = state.currentAudioItem.type === 'Radio'
       const time = audioEl.currentTime || 0
       const duration = audioEl.duration
       const progress = time / duration
       currentTimeEl.innerHTML = `${formatTime(time)}`
-      durationEl.innerHTML = `${formatTime(duration)}`
+      durationEl.innerHTML = radio ? '' : `${formatTime(duration)}`
+      progressBarEl.style.display = radio ? 'none' : 'block'
       // progressBarEl.style.transform = `scaleX(${progress})`
       progressBarEl.style.width = `${progress * 100}%`
     }
@@ -114,7 +108,7 @@ import { RadioParser } from './icecast-parser'
   /// Audio Updates
 
   const setAudioProgress = (progress) => {
-    if (state.currentAudioItem && audioEl.duration) {
+    if (state.currentAudioItem && state.currentAudioItem.type !== 'Radio' && audioEl.duration) {
       const p = Math.max(0, Math.min(1, progress))
       audioEl.currentTime = p * audioEl.duration
     }
@@ -123,7 +117,6 @@ import { RadioParser } from './icecast-parser'
   const updateAudioSrc = () => {
     if (state.currentAudioItem) {
       audioEl.src = state.currentAudioItem.url
-      audioEl.currentTime = 60 * 5
     } else {
       audioEl.src = null
       audioEl.currentTime = 0
@@ -133,6 +126,16 @@ import { RadioParser } from './icecast-parser'
 
   const chooseInitialSrc = () => {
     // TODO: if radio is live, choose that :)
+    if (state.radioAvailable) {
+      const md = state.radioMetadata
+      state.currentAudioItem = {
+        type: 'Radio',
+        name: md ? `${md.name}${md.description ? ` - ${md.description}` : ''}` : '',
+        url: radioStreamUrl
+      }
+      updateAudioSrc()
+      return
+    }
 
     // choose randomly from available media
     const possibleItems = [
@@ -199,8 +202,21 @@ import { RadioParser } from './icecast-parser'
       return archiveNames.map(name => ({ type: 'radio-archive', name: name, url: `${radioArchiveDirectory}${name}/${name}.mp3` }))
     })
 
+  const getRadioAvailable = () => fetch(radioStreamUrl)
+    .then(res => res.status == 200)
+
+  const updateRadioAvailable = () => getRadioAvailable().then(avail => {
+    state.radioAvailable = !!avail
+  })
+
+  const updateRadioMetadata = () => scrapeIcecastHomepageForRadioMetadata().then(metadata => {
+    state.radioMetadata = metadata
+  })
+
   function loadExternalData() {
     return Promise.all([
+      updateRadioAvailable(),
+      updateRadioMetadata(),
       loadMixArchiveItems().then(items => {
         data.mixItems = items
       }),
@@ -210,13 +226,27 @@ import { RadioParser } from './icecast-parser'
     ])
   }
 
+  function updateRadioAvailableAndMetadataLoop() {
+    try {
+      updateRadioAvailable()
+      updateRadioMetadata()
+    } catch (err) {
+      console.log(err)
+    }
+
+    setTimeout(updateRadioAvailableAndMetadataLoop, 30 * 1000)
+  }
+
   /// Starting Up
 
   renderFromState()
+
   loadExternalData().then(() => {
     state.loading = false
     console.log(data)
     renderFromState()
+
+    setTimeout(updateRadioAvailableAndMetadataLoop, 30 * 1000)
 
     const updateAudioLoop = () => {
       updateAudioUIElements()
@@ -263,6 +293,34 @@ import { RadioParser } from './icecast-parser'
       .catch(err => {
         console.log('err scraping namecheap hosting', namecheapUrl, err)
         return []
+      })
+  }
+
+  function scrapeIcecastHomepageForRadioMetadata() {
+    return fetch(radioHomeUrl)
+      .then(response => response.text())
+      .then(text => {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(text, 'text/html')
+        const tableRows = doc.querySelectorAll('.mountcont tbody tr')
+
+        let streamName = null, streamDescription = null
+        tableRows.forEach(r => {
+          const tds = r.querySelectorAll('td')
+          const title = tds[0].innerText
+          const data = tds[1].innerText
+          if (title === 'Stream Name:') {
+            streamName = data
+          } else if (title === 'Stream Description:') {
+            streamDescription = data
+          }
+        })
+
+        return { name: streamName, description: streamDescription }
+      })
+      .catch(err => {
+        console.log('err scraping icecast homepage', err)
+        return null
       })
   }
 

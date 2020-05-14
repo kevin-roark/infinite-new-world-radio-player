@@ -1,7 +1,7 @@
 .inw-player-container {
   position: fixed;
   left: 0; bottom: 0;
-  width: 400px; height: 120px;
+  width: 600px; height: 120px;
   background: #ccc;
   display: flex; align-items: flex-start; justify-content: center;
   font-family: Helvetica, sans-serif;
@@ -45,6 +45,7 @@
   position: absolute;
   left: 12px; top: 12px;
   font-weight: bold;
+  max-width: 200px;
 }
 
 .inw-player-current-item-type {

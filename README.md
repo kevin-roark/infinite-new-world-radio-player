@@ -1,12 +1,19 @@
 # infinite-new-world-radio-player
 radio / mix js for infinitenew.world
 
+## Still TODO
+  * Real CSS Styling
+  * Handling audio playback errors
+  * Reading and updating new radio stream metadata
+  * Click mix buttons on cargo site to update current source
+
 ## Potentially useful links
   * https://code.google.com/archive/p/streamscraper/
   * https://github.com/ghaiklor/icecast-parser
   * https://stackoverflow.com/questions/38418354/html5-audio-tag-support-for-icecast
   * https://infinitenew.world/
   * https://www.icecast.org/docs/icecast-2.4.1/config-file.html#global-headers
+  * https://www.vultr.com/docs/install-icecast-on-ubuntu-18-04#Configure_Icecast
   * https://www.webconfs.com/http-header-check.php
   * https://support.cargo.site/Custom-HTML
 
@@ -24,3 +31,4 @@ radio / mix js for infinitenew.world
       Header add Access-Control-Allow-Methods: "*"
       Header add Access-Control-Allow-Headers: "*"
     ```
+  * added same CORS to icecast config
