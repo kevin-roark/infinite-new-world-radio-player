@@ -4,6 +4,7 @@
   const radioArchiveDirectory = 'https://media.infinitenew.world/radio/'
   const radioHomeUrl = `https://radio.infinitenew.world`
   const radioStreamUrl = 'https://radio.infinitenew.world/stream'
+  const radioMetadataUpdateInterval = 10 * 1000
 
   /// Setup HTML Structure
   const containerHtml = `
@@ -124,13 +125,26 @@
     }
   }
 
+  const playAudio = () => {
+    if (state.currentAudioItem) {
+      audioEl.play()
+      state.playing = true
+    } else {
+      audioEl.pause()
+      state.playing = false
+    }
+  }
+
+  const getRadioName = () => {
+    const md = state.radioMetadata
+    return md ? `${md.name}${md.description ? ` - ${md.description}` : ''}` : ''
+  }
+
   const chooseInitialSrc = () => {
-    // TODO: if radio is live, choose that :)
     if (state.radioAvailable) {
-      const md = state.radioMetadata
       state.currentAudioItem = {
         type: 'Radio',
-        name: md ? `${md.name}${md.description ? ` - ${md.description}` : ''}` : '',
+        name: getRadioName(),
         url: radioStreamUrl
       }
       updateAudioSrc()
@@ -168,14 +182,26 @@
         chooseInitialSrc()
       }
 
-      if (state.currentAudioItem) {
-        audioEl.play()
-        state.playing = true
-      }
+      playAudio()
     }
 
     renderFromState()
   }
+
+  // when images for mix on homepage are clicked, play the relevant mix
+  data.homePageMixes.forEach(item => {
+    if (item.imgEl) {
+      item.imgEl.onclick = (e) => {
+        const mixItem = data.mixItems.find(d => d.name == item.title)
+        if (mixItem) {
+          state.currentAudioItem = mixItem
+          updateAudioSrc()
+          playAudio()
+          renderFromState()
+        }
+      }
+    }
+  })
 
   // progress bar click logic
   progressBarBgEl.onclick = (e) => {
@@ -187,8 +213,6 @@
     const progress = e.offsetX / offsetWidth
     setAudioProgress(progress)
   }
-
-  // TODO: logic for clicking mixes on the home page
 
   /// Loading Initial State
 
@@ -211,6 +235,15 @@
 
   const updateRadioMetadata = () => scrapeIcecastHomepageForRadioMetadata().then(metadata => {
     state.radioMetadata = metadata
+    if (state.currentAudioItem && state.currentAudioItem.type === 'Radio') {
+      if (metadata) {
+        state.currentAudioItem.name = getRadioName()
+      } else {
+        state.currentAudioItem = null
+        currentAudioItem()
+      }
+      renderFromState()
+    }
   })
 
   function loadExternalData() {
@@ -234,7 +267,7 @@
       console.log(err)
     }
 
-    setTimeout(updateRadioAvailableAndMetadataLoop, 30 * 1000)
+    setTimeout(updateRadioAvailableAndMetadataLoop, radioMetadataUpdateInterval)
   }
 
   /// Starting Up
@@ -246,7 +279,7 @@
     console.log(data)
     renderFromState()
 
-    setTimeout(updateRadioAvailableAndMetadataLoop, 30 * 1000)
+    setTimeout(updateRadioAvailableAndMetadataLoop, radioMetadataUpdateInterval)
 
     const updateAudioLoop = () => {
       updateAudioUIElements()

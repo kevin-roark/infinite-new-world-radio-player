@@ -2,10 +2,12 @@
 radio / mix js for infinitenew.world
 
 ## Still TODO
+  * Show option to play radio when its live but a mix is playing
+  * Show that radio is live in the player by default
   * Real CSS Styling
   * Handling audio playback errors
   * Reading and updating new radio stream metadata
-  * Click mix buttons on cargo site to update current source
+  * Handle being on the radio archives page as well
 
 ## Potentially useful links
   * https://code.google.com/archive/p/streamscraper/
