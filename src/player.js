@@ -22,8 +22,17 @@ import { RadioParser } from './icecast-parser'
     <button class="inw-player-play-btn"></button>
 
     <div class="inw-player-current-item-container">
-      <div class="inw-player-current-item-type"></div>
-      <div class="inw-player-current-item-title"></div>
+      <div class="inw-player-current-item-text">
+        <div class="inw-player-current-item-type"></div>
+        <div class="inw-player-current-item-title"></div>
+      </div>
+
+      <div class="inw-player-current-audio-ui">
+        <div class="inw-player-current-time"></div>
+        <div class="inw-player-duration"></div>
+        <div class="inw-player-progress-bar-base inw-player-progress-bar-bg"></div>
+        <div class="inw-player-progress-bar-base inw-player-progress-bar"></div>
+      </div>
     </div>
 
     <audio id="inw-player-audio"></audio>
@@ -36,12 +45,16 @@ import { RadioParser } from './icecast-parser'
 
   const loadingIndicator = container.querySelector('.inw-loading')
   const playButton = container.querySelector('.inw-player-play-btn')
+
+  const currentItemContainer = container.querySelector('.inw-player-current-item-container')
   const currentItemTypeEl = container.querySelector('.inw-player-current-item-type')
   const currentItemTitleEl = container.querySelector('.inw-player-current-item-title')
+  const currentTimeEl = container.querySelector('.inw-player-current-time')
+  const durationEl = container.querySelector('.inw-player-duration')
+  const progressBarBgEl = container.querySelector('.inw-player-progress-bar-bg')
+  const progressBarEl = container.querySelector('.inw-player-progress-bar')
 
   const audioEl = container.querySelector('audio')
-
-  // TODO: clean elements for title, type, duration, current time
 
   /// Data
   const data = {
@@ -57,19 +70,60 @@ import { RadioParser } from './icecast-parser'
     playing: false
   }
 
+  /// Render
+
+  const zpad = (n, len = 2) => {
+    let ns = n + ''
+    while (ns.length < len) {
+      ns = '0' + ns
+    }
+    return ns
+  }
+
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds - h * 3600) / 60)
+    const s = Math.round(seconds - h * 3600 - m * 60)
+    return `${h > 0 ? `${zpad(h)}:` : ''}${zpad(m)}:${zpad(s)}`
+  }
+
+  const updateAudioUIElements = () => {
+    if (state.currentAudioItem && audioEl.duration) {
+      const time = audioEl.currentTime || 0
+      const duration = audioEl.duration
+      const progress = time / duration
+      currentTimeEl.innerHTML = `${formatTime(time)}`
+      durationEl.innerHTML = `${formatTime(duration)}`
+      // progressBarEl.style.transform = `scaleX(${progress})`
+      progressBarEl.style.width = `${progress * 100}%`
+    }
+  }
+
   const renderFromState = () => {
     loadingIndicator.style.display = state.loading ? 'block' : 'none'
     loadingIndicator.innerHTML = state.loading ? 'Loading...' : ''
 
     playButton.innerHTML = state.playing ? 'Pause' : 'Play'
 
+    currentItemContainer.style.display = state.currentAudioItem ? 'block' : 'none'
     currentItemTypeEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.type : ''
     currentItemTitleEl.innerHTML = state.currentAudioItem ? state.currentAudioItem.name : ''
+    updateAudioUIElements()
+  }
+
+  /// Audio Updates
+
+  const setAudioProgress = (progress) => {
+    if (state.currentAudioItem && audioEl.duration) {
+      const p = Math.max(0, Math.min(1, progress))
+      audioEl.currentTime = p * audioEl.duration
+    }
   }
 
   const updateAudioSrc = () => {
     if (state.currentAudioItem) {
       audioEl.src = state.currentAudioItem.url
+      audioEl.currentTime = 60 * 5
     } else {
       audioEl.src = null
       audioEl.currentTime = 0
@@ -120,6 +174,17 @@ import { RadioParser } from './icecast-parser'
     renderFromState()
   }
 
+  // progress bar click logic
+  progressBarBgEl.onclick = (e) => {
+    const progress = e.offsetX / e.target.offsetWidth
+    setAudioProgress(progress)
+  }
+  progressBarEl.onclick = (e) => {
+    const offsetWidth = progressBarBgEl.getBoundingClientRect().width
+    const progress = e.offsetX / offsetWidth
+    setAudioProgress(progress)
+  }
+
   // TODO: logic for clicking mixes on the home page
 
   /// Loading Initial State
@@ -152,6 +217,12 @@ import { RadioParser } from './icecast-parser'
     state.loading = false
     console.log(data)
     renderFromState()
+
+    const updateAudioLoop = () => {
+      updateAudioUIElements()
+      requestAnimationFrame(updateAudioLoop)
+    }
+    updateAudioLoop()
   })
 
   /// Helper functions

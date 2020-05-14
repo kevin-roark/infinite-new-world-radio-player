@@ -4,6 +4,11 @@ radio / mix js for infinitenew.world
 ## Potentially useful links
   * https://code.google.com/archive/p/streamscraper/
   * https://github.com/ghaiklor/icecast-parser
+  * https://stackoverflow.com/questions/38418354/html5-audio-tag-support-for-icecast
+  * https://infinitenew.world/
+  * https://www.icecast.org/docs/icecast-2.4.1/config-file.html#global-headers
+  * https://www.webconfs.com/http-header-check.php
+  * https://support.cargo.site/Custom-HTML
 
 ## Notes from Graham
   * show the current name of the radio on air next to the play button on the player if radio was live and allow you to play it.
