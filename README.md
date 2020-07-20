@@ -32,3 +32,15 @@ radio / mix js for infinitenew.world
       Header add Access-Control-Allow-Headers: "*"
     ```
   * added same CORS to icecast config
+
+## Useful links for gatsby / keystone
+  * https://www.keystonejs.com/quick-start/
+  * https://gatsby-theme-element-jm.netlify.app/
+  * https://developers.soundcloud.com/docs/api/html5-widget
+  * https://developers.soundcloud.com/docs/api/#playing
+  * https://www.gatsbyjs.org/tutorial/part-five/
+
+## Soundcloud
+  * https://soundcloud.com/infinitenewworld
+  * https://codepen.io/mttymtt/pen/LYEjJLz
+  * https://codepen.io/noname11/pen/KrmNgr
