@@ -8,6 +8,8 @@ const { StaticApp } = require('@keystonejs/app-static');
 const initialiseData = require('./initial-data');
 const models = require('./models')
 
+const prod = process.env.NODE_ENV === 'production'
+
 const { MongooseAdapter: Adapter } = require('@keystonejs/adapter-mongoose');
 
 const PROJECT_NAME = 'inw-site';
@@ -16,6 +18,7 @@ const adapterConfig = { mongoUri: 'mongodb+srv://kevin:kevinmongo@cluster0.bru7j
 const keystone = new Keystone({
   name: PROJECT_NAME,
   adapter: new Adapter(adapterConfig),
+  cookieSecret: prod ? 'inw-prod' : 'inw-dev',
   onConnect: process.env.CREATE_TABLES !== 'true' && initialiseData,
 });
 

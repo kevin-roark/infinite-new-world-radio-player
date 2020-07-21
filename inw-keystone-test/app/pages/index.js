@@ -12,6 +12,7 @@ const IndexQuery = gql`
     }
 
     audioItems: allAudioItems(first: 10) {
+      id
       name
       audioType
       soundcloudUrl
@@ -30,11 +31,18 @@ const IndexQuery = gql`
 
 const Index = () => {
   const { loading, error, data } = useQuery(IndexQuery)
-  console.log(data)
 
   return (
     <div>
       {loading && 'Loading...'}
+
+      {data && data.audioItems.map(item => {
+        return (
+          <div key={item.id}>
+            {item.name}
+          </div>
+        )
+      })}
 
       OK now I now what this is. goto{' '}
       <Link href="/about">

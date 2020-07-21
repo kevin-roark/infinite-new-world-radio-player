@@ -23,6 +23,8 @@ const Config = {
 const AudioItem = {
   fields: {
     name: { type: Text, isUnique: true },
+    subtitle: { type: Text },
+    creator: { type: Text },
     audioType: {
       type: Select, // https://www.keystonejs.com/keystonejs/fields/src/types/select/
       options: [
